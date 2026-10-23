@@ -1,0 +1,99 @@
+name: Windows build
+
+on:
+  workflow_dispatch:
+    inputs:
+      core_branch:
+        description: azerothcore-wotlk-coa branch
+        default: fix/area52-shield-talent-login-20261019
+      playerbots_branch:
+        description: mod-playerbots branch
+        default: coa-bot-strategies
+      mysql_version:
+        description: MySQL version of your server (the build links its libmysql.dll and ships it)
+        default: 8.4.2
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 360
+    steps:
+      - name: Get the core and playerbots
+        shell: bash
+        run: |
+          git clone --depth 1 -b "${{ inputs.core_branch }}" https://github.com/Brytenwally/azerothcore-wotlk-coa core
+          git clone --depth 1 -b "${{ inputs.playerbots_branch }}" https://github.com/Brytenwally/mod-playerbots core/modules/mod-playerbots
+          for repo in core core/modules/mod-playerbots; do
+            echo "$repo $(git -C "$repo" rev-parse --short HEAD) $(git -C "$repo" log -1 --format=%s)" | tee -a versions.txt
+          done
+
+      - name: Install Boost
+        id: boost
+        uses: MarkusJx/install-boost@v2
+        with:
+          boost_version: 1.84.0
+          platform_version: 2022
+          toolset: msvc
+
+      - name: Get MySQL ${{ inputs.mysql_version }}
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.mysql_version }}"
+          $series = ($version -split '\.')[0..1] -join '.'
+          $file = "mysql-$version-winx64.zip"
+          $urls = @(
+            "https://cdn.mysql.com/archives/mysql-$series/$file",
+            "https://dev.mysql.com/get/Downloads/MySQL-$series/$file"
+          )
+          $ok = $false
+          foreach ($url in $urls) {
+            try {
+              Invoke-WebRequest -Uri $url -OutFile $file -UseBasicParsing
+              $ok = $true
+              break
+            } catch {
+              Write-Host "Not at $url"
+            }
+          }
+          if (-not $ok) { throw "MySQL $version could not be downloaded" }
+          Expand-Archive $file -DestinationPath mysql
+          $root = (Get-ChildItem mysql -Directory | Select-Object -First 1).FullName
+          "MYSQL_ROOT_DIR=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "MySQL $version in $root"
+
+      - name: Install OpenSSL
+        run: choco install openssl --no-progress -y
+
+      - name: Configure
+        env:
+          BOOST_ROOT: ${{ steps.boost.outputs.BOOST_ROOT }}
+        run: >
+          cmake -S core -B build -G "Visual Studio 17 2022" -A x64
+          -DAPPS_BUILD=all -DTOOLS_BUILD=none -DSCRIPTS=static -DMODULES=static
+          -DMYSQL_ROOT_DIR="$env:MYSQL_ROOT_DIR"
+
+      - name: Check the MySQL used
+        shell: bash
+        run: |
+          grep -E "^MYSQL_(INCLUDE_DIR|LIBRARY)" build/CMakeCache.txt
+          grep -E "^MYSQL_LIBRARY.*mysql-${{ inputs.mysql_version }}-winx64" build/CMakeCache.txt > /dev/null \
+            || { echo "CMake did not pick MySQL ${{ inputs.mysql_version }}"; exit 1; }
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Collect the server files
+        shell: bash
+        run: |
+          mkdir -p server
+          cp -r build/bin/Release/. server/
+          cp "$(cygpath -u "$MYSQL_ROOT_DIR")/lib/libmysql.dll" server/
+          echo "mysql ${{ inputs.mysql_version }}" >> versions.txt
+          cp versions.txt server/
+          ls server
+
+      - name: Upload the server files
+        uses: actions/upload-artifact@v4
+        with:
+          name: freepick-server-windows
+          path: server

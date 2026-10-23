@@ -1,0 +1,29 @@
+# Freepick-build
+
+Builds the Windows server (worldserver and authserver) for the Freepick game mode. It combines:
+- [azerothcore-wotlk-coa](https://github.com/Brytenwally/azerothcore-wotlk-coa) on branch
+  `fix/area52-shield-talent-login-20261019`, with the CoA modules it already contains;
+- [mod-playerbots](https://github.com/Brytenwally/mod-playerbots) on branch `coa-bot-strategies` (CoA bots with the
+  dungeon and raid strategies).
+
+No other modules are added: no 10 Man World and no ALE.
+
+## Running a build
+
+1. Open **Actions**, pick **Windows build**, and click **Run workflow**. You can change the branches in that dialog.
+2. The build takes about one to two hours. Click the run to follow each step.
+3. When it is green, download **freepick-server-windows** under **Artifacts** at the bottom of the run page.
+4. Unzip it over your server folder. Keep your own `.conf` files and the `Data` folder.
+   - `versions.txt` in the zip says which commit of each repository went into the build.
+
+The databases and the `Data` folder (dbc, maps, vmaps, mmaps) are not part of the build.
+
+## MySQL version
+
+The worldserver refuses to start unless its `libmysql.dll` is the exact MySQL version it was compiled against. The
+error is "Used MySQL library version ... does not match" (ACE00046).
+
+The **mysql_version** field of the Run workflow dialog picks that version. Its default is `8.4.2`, the version of
+the portable server. The build downloads that version, compiles against it and puts its `libmysql.dll` in the zip.
+
+Use the zip's `libmysql.dll`, not an older one.
