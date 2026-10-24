@@ -1,8 +1,8 @@
 # Freepick-build
 
 Builds the Windows server (worldserver and authserver) for the Freepick game mode. It combines:
-- [azerothcore-wotlk-coa](https://github.com/Brytenwally/azerothcore-wotlk-coa) on branch
-  `fix/area52-shield-talent-login-20261019`, with the CoA modules it already contains;
+- [azerothcore-wotlk-coa](https://github.com/Brytenwally/azerothcore-wotlk-coa) on branch `main`: the Area 52 server
+  source with the upstream CoA updates applied, and the CoA modules it already contains;
 - [mod-playerbots](https://github.com/Brytenwally/mod-playerbots) on branch `coa-bot-strategies` (CoA bots with the
   dungeon and raid strategies).
 
@@ -17,6 +17,9 @@ No other modules are added: no 10 Man World and no ALE.
    - `versions.txt` in the zip says which commit of each repository went into the build.
 
 The databases and the `Data` folder (dbc, maps, vmaps, mmaps) are not part of the build.
+
+The worldserver applies the core's pending database updates the first time it starts. Back up the auth, characters and
+world databases before starting a new build, and try a build with many new updates on a copy of them first.
 
 ## MySQL version
 

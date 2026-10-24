@@ -5,7 +5,7 @@ on:
     inputs:
       core_branch:
         description: azerothcore-wotlk-coa branch
-        default: fix/area52-shield-talent-login-20261019
+        default: main
       playerbots_branch:
         description: mod-playerbots branch
         default: coa-bot-strategies
