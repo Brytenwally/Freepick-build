@@ -25,6 +25,13 @@ The databases and the `Data` folder (dbc, maps, vmaps, mmaps) are not part of th
 The worldserver applies the core's pending database updates the first time it starts. Back up the auth, characters and
 world databases before starting a new build, and try a build with many new updates on a copy of them first.
 
+## Area 52 bot SQL
+
+The zip carries `sql/playerbots/area52_*.sql`: the bots' Legendary classes (`area52_legendary_classes.sql`) and
+their rotations. The worldserver's playerbots updater applies them from the source tree when it has one; otherwise run
+them against the playerbots database before the first start, and again after a new build changes them. A build or
+rotation can be tweaked in those tables directly, followed by a restart.
+
 ## Identical function folding
 
 The build links with `/OPT:NOICF`. MSVC's Release default (`/OPT:ICF`) merges functions with identical bodies, and

@@ -127,6 +127,8 @@ jobs:
           cp "$(cygpath -u "$OPENSSL_ROOT_DIR")"/bin/libcrypto*.dll "$(cygpath -u "$OPENSSL_ROOT_DIR")"/bin/libssl*.dll server/
           echo "mysql ${{ inputs.mysql_version }}" >> versions.txt
           cp versions.txt server/
+          mkdir -p server/sql/playerbots
+          cp core/modules/mod-playerbots/data/sql/playerbots/custom/area52_*.sql server/sql/playerbots/
           ls server
 
       - name: Upload the server files
