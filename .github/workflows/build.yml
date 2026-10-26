@@ -61,8 +61,25 @@ jobs:
           "MYSQL_ROOT_DIR=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "MySQL $version in $root"
 
+      # The Chocolatey package downloads a 311 MB installer from slproweb.com, which can stall for the whole
+      # Chocolatey timeout. The installed OpenSSL is cached, so only a first build or a new version downloads it.
+      - name: Cache OpenSSL
+        id: openssl-cache
+        uses: actions/cache@v4
+        with:
+          path: C:\Program Files\OpenSSL
+          key: openssl-4.1.0-win64
+
       - name: Install OpenSSL
-        run: choco install openssl --no-progress -y
+        if: steps.openssl-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          for ($try = 1; $try -le 3; $try++) {
+            choco install openssl --version=4.1.0 --no-progress -y --force --execution-timeout=900
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Host "OpenSSL install failed on try $try"
+          }
+          exit 1
 
       - name: Configure
         env:
