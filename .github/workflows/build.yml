@@ -8,7 +8,7 @@ on:
         default: main
       playerbots_branch:
         description: mod-playerbots branch
-        default: coa-bot-strategies
+        default: area52-freepick
       mysql_version:
         description: MySQL version of your server (the build links its libmysql.dll and ships it)
         default: 8.4.2

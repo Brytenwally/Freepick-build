@@ -3,8 +3,9 @@
 Builds the Windows server (worldserver and authserver) for the Freepick game mode. It combines:
 - [azerothcore-wotlk-coa](https://github.com/Brytenwally/azerothcore-wotlk-coa) on branch `main`: the Area 52 server
   source with the upstream CoA updates applied, and the CoA modules it already contains;
-- [mod-playerbots](https://github.com/Brytenwally/mod-playerbots) on branch `coa-bot-strategies` (CoA bots with the
-  dungeon and raid strategies).
+- [mod-playerbots](https://github.com/Brytenwally/mod-playerbots) on branch `area52-freepick`: the CoA bots with the
+  dungeon and raid strategies of `coa-bot-strategies`, plus the Freepick Hero work (Legendary classes, their
+  rotations and triggers).
 
 No other modules are added: no 10 Man World and no ALE.
 
