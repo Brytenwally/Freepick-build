@@ -61,25 +61,30 @@ jobs:
           "MYSQL_ROOT_DIR=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "MySQL $version in $root"
 
-      # The Chocolatey package downloads a 311 MB installer from slproweb.com, which can stall for the whole
-      # Chocolatey timeout. The installed OpenSSL is cached, so only a first build or a new version downloads it.
+      # OpenSSL comes from vcpkg, which every GitHub Windows runner has and which downloads from GitHub. The
+      # Chocolatey package fetched a 311 MB installer from slproweb.com that stalled for its whole timeout on runs 3
+      # and 4. The built OpenSSL is cached, so only the first build or a new cache key builds it again.
       - name: Cache OpenSSL
         id: openssl-cache
         uses: actions/cache@v4
         with:
-          path: C:\Program Files\OpenSSL
-          key: openssl-4.1.0-win64
+          path: openssl
+          key: openssl-vcpkg-x64-windows-v1
 
-      - name: Install OpenSSL
+      - name: Build OpenSSL with vcpkg
         if: steps.openssl-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          for ($try = 1; $try -le 3; $try++) {
-            choco install openssl --version=4.1.0 --no-progress -y --force --execution-timeout=900
-            if ($LASTEXITCODE -eq 0) { exit 0 }
-            Write-Host "OpenSSL install failed on try $try"
-          }
-          exit 1
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install openssl:x64-windows --x-install-root="$PWD\vcpkg-installed"
+          if ($LASTEXITCODE -ne 0) { throw "vcpkg could not build OpenSSL" }
+          Copy-Item -Recurse "$PWD\vcpkg-installed\x64-windows" openssl
+
+      - name: Use OpenSSL
+        shell: pwsh
+        run: |
+          $root = (Resolve-Path openssl).Path
+          "OPENSSL_ROOT_DIR=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Get-ChildItem "$root\bin" -Filter "lib*.dll" | ForEach-Object { Write-Host $_.Name }
 
       - name: Configure
         env:
@@ -87,14 +92,17 @@ jobs:
         run: >
           cmake -S core -B build -G "Visual Studio 17 2022" -A x64
           -DAPPS_BUILD=all -DTOOLS_BUILD=none -DSCRIPTS=static -DMODULES=static
-          -DMYSQL_ROOT_DIR="$env:MYSQL_ROOT_DIR"
+          -DMYSQL_ROOT_DIR="$env:MYSQL_ROOT_DIR" -DOPENSSL_ROOT_DIR="$env:OPENSSL_ROOT_DIR"
 
-      - name: Check the MySQL used
+      - name: Check the MySQL and OpenSSL used
         shell: bash
         run: |
           grep -E "^MYSQL_(INCLUDE_DIR|LIBRARY)" build/CMakeCache.txt
           grep -E "^MYSQL_LIBRARY.*mysql-${{ inputs.mysql_version }}-winx64" build/CMakeCache.txt > /dev/null \
             || { echo "CMake did not pick MySQL ${{ inputs.mysql_version }}"; exit 1; }
+          grep -E "^OPENSSL_(INCLUDE_DIR|CRYPTO_LIBRARY|SSL_LIBRARY)" build/CMakeCache.txt
+          grep -E "^OPENSSL_CRYPTO_LIBRARY.*/openssl/" build/CMakeCache.txt > /dev/null \
+            || { echo "CMake did not pick the vcpkg OpenSSL"; exit 1; }
 
       - name: Build
         run: cmake --build build --config Release --parallel
@@ -105,6 +113,7 @@ jobs:
           mkdir -p server
           cp -r build/bin/Release/. server/
           cp "$(cygpath -u "$MYSQL_ROOT_DIR")/lib/libmysql.dll" server/
+          cp "$(cygpath -u "$OPENSSL_ROOT_DIR")"/bin/libcrypto*.dll "$(cygpath -u "$OPENSSL_ROOT_DIR")"/bin/libssl*.dll server/
           echo "mysql ${{ inputs.mysql_version }}" >> versions.txt
           cp versions.txt server/
           ls server

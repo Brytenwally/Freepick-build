@@ -17,6 +17,9 @@ No other modules are added: no 10 Man World and no ALE.
 4. Unzip it over your server folder. Keep your own `.conf` files and the `Data` folder.
    - `versions.txt` in the zip says which commit of each repository went into the build.
 
+The zip also holds the OpenSSL DLLs (`libcrypto-3-x64.dll`, `libssl-3-x64.dll`) the server was built with; keep them
+next to the exe files.
+
 The databases and the `Data` folder (dbc, maps, vmaps, mmaps) are not part of the build.
 
 The worldserver applies the core's pending database updates the first time it starts. Back up the auth, characters and
