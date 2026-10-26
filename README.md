@@ -25,6 +25,14 @@ The databases and the `Data` folder (dbc, maps, vmaps, mmaps) are not part of th
 The worldserver applies the core's pending database updates the first time it starts. Back up the auth, characters and
 world databases before starting a new build, and try a build with many new updates on a copy of them first.
 
+## Identical function folding
+
+The build links with `/OPT:NOICF`. MSVC's Release default (`/OPT:ICF`) merges functions with identical bodies, and
+the core tells implemented aura and spell effect handlers from unimplemented ones by comparing function pointers:
+the empty `AuraEffect::HandleNoImmediateEffect` became the same function as `HandleNULL`. Free Pick then rejected
+every Mystic Enchant built on such an aura (spell modifiers, proc triggers, periodic damage and healing): 84 of 3,822
+connected, against about 3,200 on a Linux build.
+
 ## MySQL version
 
 The worldserver refuses to start unless its `libmysql.dll` is the exact MySQL version it was compiled against. The

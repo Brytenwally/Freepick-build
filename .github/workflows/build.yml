@@ -101,6 +101,7 @@ jobs:
           cmake -S core -B build -G "Visual Studio 17 2022" -A x64
           -DAPPS_BUILD=all -DTOOLS_BUILD=none -DSCRIPTS=static -DMODULES=static
           -DMYSQL_ROOT_DIR="$env:MYSQL_ROOT_DIR" -DOPENSSL_ROOT_DIR="$env:OPENSSL_ROOT_DIR"
+          -DCMAKE_EXE_LINKER_FLAGS="/OPT:NOICF" -DCMAKE_SHARED_LINKER_FLAGS="/OPT:NOICF"
 
       - name: Check the MySQL and OpenSSL used
         shell: bash
@@ -109,6 +110,8 @@ jobs:
           grep -E "^MYSQL_LIBRARY.*mysql-${{ inputs.mysql_version }}-winx64" build/CMakeCache.txt > /dev/null \
             || { echo "CMake did not pick MySQL ${{ inputs.mysql_version }}"; exit 1; }
           grep -E "^(OPENSSL_INCLUDE_DIR|LIB_EAY|SSL_EAY|OPENSSL_CRYPTO_LIBRARY|OPENSSL_SSL_LIBRARY)" build/CMakeCache.txt
+          grep -E "^CMAKE_EXE_LINKER_FLAGS:STRING=.*/OPT:NOICF" build/CMakeCache.txt \
+            || { echo "The worldserver would link with identical function folding"; exit 1; }
           grep -E "^OPENSSL_INCLUDE_DIR.*/Freepick-build/openssl/include" build/CMakeCache.txt > /dev/null \
             || { echo "CMake did not pick the vcpkg OpenSSL"; exit 1; }
 
